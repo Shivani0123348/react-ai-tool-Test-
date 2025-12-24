@@ -98,7 +98,7 @@ function App() {
     <h1 className='text-4xl pb-3 text-center bg-clip-text text-transparent bg-gradient-to-r from-pink-700 to-violet-700'
     >
       Hello User Ask me Anything</h1>
-    <div className='container h-150 overflow-y-auto scrollbar-hide h-40 ' ref={scrollToAns}>
+    <div className='container h-75 overflow-y-auto scrollbar-hide h-40 ' ref={scrollToAns}>
        <div className='text-zinc-300'>
     <ul> 
     {
