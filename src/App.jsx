@@ -1,144 +1,144 @@
-import { useEffect, useState, useRef} from 'react'
-
-import './App.css'
-import {URL} from "./constants"
+import { useEffect, useState, useRef } from 'react';
+import './App.css';
+import { URL } from './constants';
 import Answer from './components/Answers';
+
 function App() {
-  const [question,setquestion]=useState('');
-  const [result,setResult]=useState([])
-  const [recentHistory,setrecentHistory]=useState([JSON.parse(localStorage.getItem('history'))]);
-  const [SelectedHistory,setSelectedHistory]=useState('')
-  const scrollToAns=useRef();
-  const askQuestion= async()=>{
+  const [question, setquestion] = useState('');
+  const [result, setResult] = useState([]);
+  const [recentHistory, setrecentHistory] = useState([JSON.parse(localStorage.getItem('history'))]);
+  const [SelectedHistory, setSelectedHistory] = useState('');
+  const scrollToAns = useRef();
 
-    if(!question && !SelectedHistory) {
-      return false;
+  const askQuestion = async () => {
+    if (!question && !SelectedHistory) return false;
+
+    if (question) {
+      let history = localStorage.getItem('history')
+        ? [question, ...JSON.parse(localStorage.getItem('history'))]
+        : [question];
+      localStorage.setItem('history', JSON.stringify(history));
+      setrecentHistory(history);
     }
 
-    if(question)
-    {
+    const payloadData = question || SelectedHistory;
+    const payload = {
+      contents: [{ parts: [{ text: payloadData }] }]
+    };
 
-      if(localStorage.getItem('history')){
-        let history=JSON.parse(localStorage.getItem('history'))
-        history=[question, ...history]
-        localStorage.setItem('history',JSON.stringify(history))
-        setrecentHistory(history)
-      }
-  
-      else {
-        localStorage.setItem('history',JSON.stringify([question]))
-        setrecentHistory([question])
-      }
+    let response = await fetch(URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
 
-    }
+    response = await response.json();
+    let dataString = response.candidates[0].content.parts[0].text;
+    dataString = dataString.split('* ').map(item => item.trim());
 
-    const payloadData=question?question:SelectedHistory
+    setResult([
+      ...result,
+      { type: 'q', text: payloadData },
+      { type: 'a', text: dataString }
+    ]);
+    setquestion('');
 
-    const  payload= {
-      "contents":[{
-        "parts":[{"text":payloadData}]
-      }]
-     }
-    
-   let response= await fetch(URL,{
-     method:"POST",
-     body:JSON.stringify(payload)
-   })
+    setTimeout(() => {
+      scrollToAns.current.scrollTop = scrollToAns.current.scrollHeight;
+    }, 500);
+  };
 
-   response= await response.json();
-  
-   let dataString=response.candidates[0].content.parts[0].text;
-   dataString=dataString.split("* ");
-   dataString=dataString.map((item)=>item.trim())
-   
-   console.log(dataString);
-   setResult([...result,{type:'q',text:question?question:SelectedHistory},{type:'a',text:dataString}]);
-   setquestion('')
-   
-   setTimeout(()=>{
-    scrollToAns.current.scrollTop=scrollToAns.current.scrollHeight
-
-   },500)
-  }
-
-  const clearHistory=()=>{
+  const clearHistory = () => {
     localStorage.clear();
-    setrecentHistory([])
-  }
+    setrecentHistory([]);
+  };
 
-  const isEnter=(event)=>{
-     if(event.key=='Enter'){
-      askQuestion()
+  const isEnter = (event) => {
+    if (event.key === 'Enter') askQuestion();
+  };
 
-     }
+  useEffect(() => {
+    askQuestion();
+  }, [SelectedHistory]);
 
-     
-  }
-
-  useEffect(()=>{
-    askQuestion()
-  },[SelectedHistory])
   return (
- <div className='grid grid-cols-5'>
-  <div className='col-span-1 bg-zinc-800 h-screen'>
-    <h1 className='text-xl text-white pt-3 flex justify-center'>
-      <span>Recent Search </span>
-      <button onClick={clearHistory} className='cursor-pointer'><svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#e3e3e3"><path d="M312-144q-29.7 0-50.85-21.15Q240-186.3 240-216v-480h-48v-72h192v-48h192v48h192v72h-48v479.57Q720-186 698.85-165T648-144H312Zm336-552H312v480h336v-480ZM384-288h72v-336h-72v336Zm120 0h72v-336h-72v336ZM312-696v480-480Z"/></svg></button></h1>
-   <ul className='text-left overflow-auto  m-5 mt-2'>
-    {
-       recentHistory && recentHistory.map((item,index)=>(
+    <div className="flex h-screen bg-zinc-900 text-white">
+      {/* Sidebar */}
+      <div className="hidden md:flex md:flex-col w-64 bg-zinc-800 p-4 overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Recent Search</h2>
+          <button onClick={clearHistory}>
+            <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#e3e3e3">
+              <path d="M312-144q-29.7 0-50.85-21.15Q240-186.3 240-216v-480h-48v-72h192v-48h192v48h192v72h-48v479.57Q720-186 698.85-165T648-144H312Zm336-552H312v480h336v-480ZM384-288h72v-336h-72v336Zm120 0h72v-336h-72v336ZM312-696v480-480Z" />
+            </svg>
+          </button>
+        </div>
+        <ul className="space-y-2">
+          {recentHistory &&
+            recentHistory.map((item, index) => (
+              <li
+                key={index}
+                onClick={() => setSelectedHistory(item)}
+                className="cursor-pointer truncate p-2 rounded hover:bg-zinc-700 hover:text-white"
+              >
+                {item}
+              </li>
+            ))}
+        </ul>
+      </div>
 
-        < li onClick={()=>setSelectedHistory(item)} className='p-1 pl-5 truncate text-zinc-400 cursor-pointer hover:bg-zinc-700 hover:text-zinc-200'>{item}</li>
+      {/* Main Chat Area */}
+      <div className="flex flex-col flex-1">
+        <header className="p-4 text-center text-2xl sm:text-3xl font-bold bg-gradient-to-r from-pink-700 to-violet-700 bg-clip-text text-transparent">
+          Hello User Ask me Anything
+        </header>
 
-       ))
-      }
-    </ul> 
-  </div>
-  <div className='col-span-4 p-10'>
-    <h1 className='text-4xl pb-3 text-center bg-clip-text text-transparent bg-gradient-to-r from-pink-700 to-violet-700'
-    >
-      Hello User Ask me Anything</h1>
-    <div className='container h-75 overflow-y-auto scrollbar-hide h-40 ' ref={scrollToAns}>
-       <div className='text-zinc-300'>
-    <ul> 
-    {
-      result.map((item,index)=>(
-          <div key={index+Math.random()}  className={item.type=='q'?'flex justify-end':''}>{
+        {/* Chat Scroll Area */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-10 py-4" ref={scrollToAns}>
+          <ul className="space-y-4">
+            {result.map((item, index) => (
+              <div key={index + Math.random()} className={item.type === 'q' ? 'flex justify-end' : ''}>
+                {item.type === 'q' ? (
+                  <li className="bg-zinc-700 p-3 rounded-3xl max-w-md ml-auto">
+                    <Answer ans={item.text} totalResult={1} index={index} />
+                  </li>
+                ) : (
+                  item.text.map((ansItem, ansIndex) => (
+                    <li key={ansIndex + Math.random()} className="bg-zinc-800 p-3 rounded-3xl max-w-md">
+                      <Answer ans={ansItem} totalResult={item.text.length} index={ansIndex} />
+                    </li>
+                  ))
+                )}
+              </div>
+            ))}
+          </ul>
+        </div>
 
-            item.type=='q'? <li key={index+Math.random()} className='text-right p-1 border-8 bg-zinc-700 border-zinc-700 rounded-tl-3xl rounded-br-3xl  rounded-bl-3xl w-fit
-            '> <Answer ans={item.text} totalResult={1} index={index} /></li>
-          :item.text.map((ansItem,ansIndex)=>(
-<li key={ansIndex+Math.random()} className='text-left p-1 '> <Answer ans={ansItem} totalResult={item.text.length} index={ansIndex} /></li>
-          ))
-          
-          }
+        {/* Input Box */}
+        <div className="p-4 border-t border-zinc-700 bg-zinc-900">
+          <div className="flex flex-col sm:flex-row items-center sm:items-stretch gap-2 sm:gap-4 max-w-3xl mx-auto">
+            <input
+              type="text"
+              value={question}
+              onKeyDown={isEnter}
+              onChange={(e) => setquestion(e.target.value)}
+              className="flex-1 p-3 rounded-xl bg-zinc-800 text-white outline-none"
+              placeholder="Ask me anything"
+            />
+            <button
+              onClick={askQuestion}
+              className="px-6 py-3 bg-pink-700 hover:bg-pink-800 rounded-xl font-semibold"
+            >
+              Ask
+            </button>
           </div>
-      ))
-    } 
-
-    </ul>   
-      
-      
-      
-    
-  
-       
-       </div>
-      
+        </div>
+      </div>
     </div>
-
-    <div className='bg-zinc-800 w-1/2 mt-20 pr-5 text-white m-auto rounded-4xl border border-zinc-700 flex h-16'>
-      <input type="text" value={question} 
-      onKeyDown={isEnter}
-      onChange={(e)=>setquestion(e.target.value)}className="w-full h-full p-3 outline-none"placeholder="Ask me anything"/>
-      <button onClick={askQuestion}>Ask</button>
-    </div>
-  </div>
- </div>
-  )
+  );
 }
 
 export default App;
+
 
 
 
